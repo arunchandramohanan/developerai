@@ -1,0 +1,7 @@
+# Placeholder: one fuzzy/ambiguous word per line. Lines starting with # are comments.
+ignore
+bypass
+override
+reveal
+delete
+system

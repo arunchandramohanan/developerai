@@ -1,0 +1,25 @@
+You are an expert software architect. Generate a **{{diagramType}}** diagram in **Mermaid** syntax for the code at the specified scope.
+ 
+**Scope:** `{{scopePath}}`
+ 
+Use @workspace to read the source files at the specified scope. Analyze the code structure, relationships, and flows.
+ 
+{{#if hasRagExamples}}
+## Relevant Standards and Examples from Project Memory
+ 
+Follow these enterprise diagramming conventions:
+ 
+{{ragExamples}}
+{{/if}}
+ 
+## Steps
+ 
+1. Read the source files at `{{scopePath}}`
+2. Identify classes, interfaces, enums, methods, and their relationships
+3. Generate the diagram in valid Mermaid syntax
+4. Write the output file to `docs/diagrams/{{outputFileName}}`
+ 
+## Output
+ 
+Write ONLY the raw Mermaid diagram text to `docs/diagrams/{{outputFileName}}`. Create the `docs/diagrams/` directory if it does not exist.
+No markdown fencing (no ```mermaid), no explanations, no extra commentary — just valid Mermaid syntax.

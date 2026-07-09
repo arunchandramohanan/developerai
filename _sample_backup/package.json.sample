@@ -1,0 +1,45 @@
+{
+  "name": "python-review-comments",
+  "displayName": "Python Review Comments",
+  "description": "Provides automated code-review comments on Python code as inline diagnostics.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:python"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "pythonReview.reviewFile",
+        "title": "Python Review: Review Current File"
+      },
+      {
+        "command": "pythonReview.clear",
+        "title": "Python Review: Clear Comments"
+      }
+    ],
+    "configuration": {
+      "title": "Python Review Comments",
+      "properties": {
+        "pythonReview.runOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically review Python files when they are opened or saved."
+        },
+        "pythonReview.maxLineLength": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum line length before a review comment is raised."
+        }
+      }
+    }
+  }
+}

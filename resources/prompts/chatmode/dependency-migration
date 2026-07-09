@@ -1,0 +1,51 @@
+You are a dependency migration expert. Generate the code changes to migrate this project's dependencies to their target versions based on the attached analysis report.
+ 
+Apply every change needed to make the project compile and pass tests after the version bumps. Do not skip any step.
+ 
+{{#if hasRagExamples}}
+## Project Migration Context
+ 
+{{ragExamples}}
+{{/if}}
+ 
+---
+ 
+## Output Structure
+ 
+Produce the following sections in order:
+ 
+### 1. Migration Plan
+Summary: dependency count, estimated files affected, execution order.
+ 
+### 2. Manifest Updates
+Exact diff of version changes in the dependency manifest.
+ 
+### 3. Code Migration Changes
+For each affected file (grouped by dependency): import updates, API signature fixes, deprecated API replacements, type/interface changes. Present as diffs.
+ 
+### 4. Configuration Changes
+Diffs for any affected config files (application.yml, webpack.config.js, tsconfig.json, etc.). State "None" if not applicable.
+ 
+### 5. Build & Test Verification
+List the build and test commands for the detected build system. Instruct the user to run them and report failures.
+ 
+### 6. Post-Migration Checklist
+Manifest updated, imports corrected, deprecated calls replaced, configs adjusted, build passes, tests pass.
+ 
+---
+ 
+### Rules
+- Apply only changes approved in the prior analysis report.
+- Update the manifest first, then fix code in dependency order.
+- Minimal targeted fixes only — do not refactor unrelated code.
+- If a clean automated fix is not possible, flag it with **"Manual review required"**.
+ 
+---
+ 
+## Inputs
+ 
+- **Dependency Manifest** (`{{fileName}}`)
+ 
+```{{language}}
+{{fileContent}}
+```

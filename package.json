@@ -1,0 +1,703 @@
+{
+  "name": "bmo-genai-developer",
+  "displayName": "BMO GenAI Developer",
+  "description": "AI-powered development assistant: test generation, documentation, code review, diagrams, SAST remediation, dependency & platform upgrades. Dual-mode execution via GitHub Copilot CLI (SDK) or the VS Code Language Model API (Chat).",
+  "version": "1.0.5",
+  "publisher": "bmo",
+  "license": "SEE LICENSE IN README.md",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Testing",
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "copilot",
+    "code review",
+    "test generation",
+    "documentation",
+    "sast",
+    "uml"
+  ],
+  "icon": "resources/icons/devai.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devaiActivityBar",
+          "title": "BMO GenAI Developer",
+          "icon": "resources/icons/devai.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "devaiPanel",
+          "title": "BMO GenAI",
+          "icon": "resources/icons/problems.svg"
+        }
+      ]
+    },
+    "views": {
+      "devaiActivityBar": [
+        {
+          "id": "devai.mainView",
+          "name": "BMO GenAI Developer",
+          "type": "webview"
+        },
+        {
+          "id": "devai.platformUpgradesView",
+          "name": "Platform Upgrades",
+          "icon": "resources/icons/upgrade.svg"
+        }
+      ],
+      "devaiPanel": [
+        {
+          "id": "devai.reviewResultsView",
+          "name": "Review Results",
+          "icon": "resources/icons/problems.svg"
+        },
+        {
+          "id": "devai.sastResultsView",
+          "name": "SAST Findings",
+          "icon": "resources/icons/problems.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "devai.reviewResultsView",
+        "contents": "No review results yet.\nRun a code review to populate this view.\n[Review Code](command:devai.reviewCode)"
+      },
+      {
+        "view": "devai.sastResultsView",
+        "contents": "No SAST findings loaded.\n[Fix SAST Findings](command:devai.fixSastFindings)"
+      },
+      {
+        "view": "devai.platformUpgradesView",
+        "contents": "No upgrade scan run yet.\n[Automate Platform & Framework Upgrades](command:devai.upgradePlatform)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "devai.editor.submenu",
+        "label": "BMO GenAI Developer"
+      },
+      {
+        "id": "devai.explorer.submenu",
+        "label": "BMO GenAI Developer"
+      }
+    ],
+    "commands": [
+      {
+        "command": "devai.generateTests",
+        "title": "Generate Unit Tests",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateTestsForFolder",
+        "title": "Generate Tests for Folder",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateDocumentation",
+        "title": "Create Inline Documentation",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateReadme",
+        "title": "Generate README",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateFileDocumentation",
+        "title": "Generate File Documentation",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateFolderDocumentation",
+        "title": "Generate Folder Documentation",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateTestScenariosAndCases",
+        "title": "Generate Test Scenarios and Cases",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateFeatureCode",
+        "title": "Generate Feature Code",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.getBusinessLogicSummary",
+        "title": "Generate Business Logic + Requirements",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateUserStories",
+        "title": "Generate User Stories",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateShakedownTests",
+        "title": "Generate Shakedown Test Suite",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateFeatureScaffold",
+        "title": "Generate Feature Scaffold",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.updateDocsOnChanges",
+        "title": "Update Documentation",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.updateFeatureCode",
+        "title": "Update Feature Code",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.analyzeDependency",
+        "title": "Analyze Dependency Migration",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.executeDependencyMigration",
+        "title": "Execute Dependency Migration",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateUMLDiagram",
+        "title": "Generate Class Diagram",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateSequenceDiagram",
+        "title": "Generate Sequence Diagram",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.generateFlowDiagram",
+        "title": "Generate Flow Diagram",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.renderMermaidDiagram",
+        "title": "Render Diagram",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.updateDiagram",
+        "title": "Update Diagram",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.reviewCode",
+        "title": "Review Code",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.reviewChanges",
+        "title": "Review Changed Files",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.detectApiDrift",
+        "title": "Detect API Drift",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.fixSastFindings",
+        "title": "Fix SAST Findings",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.openCopilotChat",
+        "title": "Open Copilot Chat",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.toggleChatMode",
+        "title": "Toggle Chat Mode",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.upgradePlatform",
+        "title": "Automate Platform and Framework Upgrades",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.fetchJiraTicket",
+        "title": "Fetch Jira Ticket",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.openSettings",
+        "title": "Open Settings",
+        "category": "BMO GenAI"
+      },
+      {
+        "command": "devai.refreshReviewResults",
+        "title": "Refresh",
+        "category": "BMO GenAI",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devai.clearReviewResults",
+        "title": "Clear",
+        "category": "BMO GenAI",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "devai.refreshSastResults",
+        "title": "Refresh",
+        "category": "BMO GenAI",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [],
+      "editor/context": [
+        {
+          "submenu": "devai.editor.submenu",
+          "group": "z_devai@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "devai.explorer.submenu",
+          "group": "z_devai@1"
+        }
+      ],
+      "devai.editor.submenu": [
+        {
+          "command": "devai.generateTests",
+          "group": "1_generate@1"
+        },
+        {
+          "command": "devai.generateDocumentation",
+          "group": "1_generate@2"
+        },
+        {
+          "command": "devai.generateTestScenariosAndCases",
+          "group": "1_generate@3"
+        },
+        {
+          "command": "devai.generateFeatureCode",
+          "group": "1_generate@4"
+        },
+        {
+          "command": "devai.getBusinessLogicSummary",
+          "group": "1_generate@5"
+        },
+        {
+          "command": "devai.renderMermaidDiagram",
+          "group": "2_diagram@1"
+        },
+        {
+          "command": "devai.updateDiagram",
+          "group": "2_diagram@2"
+        },
+        {
+          "command": "devai.reviewCode",
+          "group": "3_review@1"
+        }
+      ],
+      "devai.explorer.submenu": [
+        {
+          "command": "devai.generateTestsForFolder",
+          "group": "1_generate@1"
+        },
+        {
+          "command": "devai.generateFolderDocumentation",
+          "group": "1_generate@2"
+        },
+        {
+          "command": "devai.generateTestScenariosAndCases",
+          "group": "1_generate@3"
+        },
+        {
+          "command": "devai.generateFeatureCode",
+          "group": "1_generate@4"
+        },
+        {
+          "command": "devai.getBusinessLogicSummary",
+          "group": "1_generate@5"
+        },
+        {
+          "command": "devai.renderMermaidDiagram",
+          "group": "2_diagram@1"
+        },
+        {
+          "command": "devai.updateDiagram",
+          "group": "2_diagram@2"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "devai.refreshReviewResults",
+          "when": "view == devai.reviewResultsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "devai.clearReviewResults",
+          "when": "view == devai.reviewResultsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "devai.refreshSastResults",
+          "when": "view == devai.sastResultsView",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "devai.generateTests",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "devai.generateDocumentation",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "devai.reviewCode",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "devai.openCopilotChat",
+        "key": "ctrl+alt+c",
+        "mac": "cmd+alt+c"
+      },
+      {
+        "command": "devai.toggleChatMode",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
+      }
+    ],
+    "configuration": {
+      "title": "BMO GenAI Developer",
+      "properties": {
+        "devai.modePreference": {
+          "type": "string",
+          "enum": [
+            "SDK_ONLY",
+            "CHAT_ONLY",
+            "AUTO"
+          ],
+          "enumDescriptions": [
+            "Use GitHub Copilot CLI exclusively",
+            "Use the VS Code Language Model (Chat) API exclusively",
+            "Use SDK with automatic Chat fallback"
+          ],
+          "default": "CHAT_ONLY",
+          "description": "Execution mode preference."
+        },
+        "devai.ghCliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the GitHub CLI (gh) executable. Blank = auto-detect / PATH."
+        },
+        "devai.copilotCliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the standalone GitHub Copilot CLI (`copilot`) executable. Blank = auto-detect / PATH. Preferred over `gh copilot` when present."
+        },
+        "devai.timeoutSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Request timeout in seconds."
+        },
+        "devai.copilotModel": {
+          "type": "string",
+          "default": "GPT-4o",
+          "description": "Copilot model used in SDK mode (passed to `copilot --model`)."
+        },
+        "devai.chatModeEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Chat Mode."
+        },
+        "devai.chatModeModel": {
+          "type": "string",
+          "default": "GPT-4o",
+          "description": "Model used in Chat Mode."
+        },
+        "devai.chatModeAgentEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use agent mode (prefix @workspace) in Chat Mode."
+        },
+        "devai.team": {
+          "type": "string",
+          "default": "",
+          "description": "Team identifier reported to the analytics backend. Required before use cases run."
+        },
+        "devai.showModeNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show mode-switch/fallback notifications."
+        },
+        "devai.showProgressIndicator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show progress indicators during AI operations."
+        },
+        "devai.autoExpandCodeBlocks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-expand code blocks in previews."
+        },
+        "devai.maxContextMessages": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Max chat context messages."
+        },
+        "devai.saveSessionHistory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Persist chat session history."
+        },
+        "devai.defaultTestFramework": {
+          "type": "string",
+          "default": "JUNIT5",
+          "description": "Default test framework."
+        },
+        "devai.generateMockitoImports": {
+          "type": "boolean",
+          "default": true,
+          "description": "Generate Mockito imports in tests."
+        },
+        "devai.defaultDocFormat": {
+          "type": "string",
+          "default": "JAVADOC",
+          "description": "Default documentation format."
+        },
+        "devai.includeParamDocs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include @param docs."
+        },
+        "devai.includeReturnDocs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include @return docs."
+        },
+        "devai.includeThrowsDocs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include @throws docs."
+        },
+        "devai.enableAutoReview": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically review on save."
+        },
+        "devai.minSeverityToShow": {
+          "type": "string",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ],
+          "default": "LOW",
+          "description": "Minimum issue severity to display."
+        },
+        "devai.analyticsApiUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Analytics / Transaction Monitoring API URL."
+        },
+        "devai.analyticsApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Analytics API key."
+        },
+        "devai.rag.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable RAG context enrichment."
+        },
+        "devai.rag.serverUrl": {
+          "type": "string",
+          "default": "",
+          "description": "RAG server URL. Blank disables RAG calls."
+        },
+        "devai.rag.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "RAG API key."
+        },
+        "devai.rag.topK": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Number of RAG examples to retrieve."
+        },
+        "devai.rag.timeoutMs": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 1000,
+          "maximum": 30000,
+          "description": "RAG request timeout (ms)."
+        },
+        "devai.sast.source": {
+          "type": "string",
+          "enum": [
+            "SONARQUBE",
+            "GITHUB"
+          ],
+          "default": "SONARQUBE",
+          "description": "Active SAST finding source."
+        },
+        "devai.sonarQube.url": {
+          "type": "string",
+          "default": "",
+          "description": "SonarQube base URL."
+        },
+        "devai.sonarQube.username": {
+          "type": "string",
+          "default": "",
+          "description": "SonarQube username / token."
+        },
+        "devai.sonarQube.password": {
+          "type": "string",
+          "default": "",
+          "description": "SonarQube password (blank if using token as username)."
+        },
+        "devai.sonarQube.projectKey": {
+          "type": "string",
+          "default": "",
+          "description": "SonarQube project key."
+        },
+        "devai.github.baseUrl": {
+          "type": "string",
+          "default": "https://api.github.com",
+          "description": "GitHub API base URL."
+        },
+        "devai.github.token": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub token for Code Scanning."
+        },
+        "devai.github.owner": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repo owner."
+        },
+        "devai.github.repo": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repo name."
+        },
+        "devai.github.ref": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub ref (branch)."
+        },
+        "devai.github.pathStripPrefix": {
+          "type": "string",
+          "default": "",
+          "description": "Strip this prefix from Code Scanning paths."
+        },
+        "devai.github.pathAddPrefix": {
+          "type": "string",
+          "default": "",
+          "description": "Add this prefix to Code Scanning paths."
+        },
+        "devai.sonatype.serverUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Sonatype IQ / Nexus server URL."
+        },
+        "devai.sonatype.username": {
+          "type": "string",
+          "default": "",
+          "description": "Sonatype username."
+        },
+        "devai.sonatype.password": {
+          "type": "string",
+          "default": "",
+          "description": "Sonatype password."
+        },
+        "devai.jira.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Jira base URL."
+        },
+        "devai.jira.email": {
+          "type": "string",
+          "default": "",
+          "description": "Jira account email."
+        },
+        "devai.jira.apiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Jira API token."
+        },
+        "devai.jira.projectKey": {
+          "type": "string",
+          "default": "",
+          "description": "Jira project key."
+        },
+        "devai.sso.authorizeUrl": {
+          "type": "string",
+          "default": "",
+          "description": "OAuth2/OIDC authorize URL (SSO builds)."
+        },
+        "devai.sso.tokenUrl": {
+          "type": "string",
+          "default": "",
+          "description": "OAuth2/OIDC token URL (SSO builds)."
+        },
+        "devai.sso.clientId": {
+          "type": "string",
+          "default": "",
+          "description": "OAuth2 public client ID (SSO builds)."
+        },
+        "devai.sso.scopes": {
+          "type": "string",
+          "default": "openid profile email offline_access",
+          "description": "Space-separated OAuth scopes."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "compile": "tsc -p ./ --noEmit",
+    "package": "vsce package --no-dependencies -o bmo-genai-developer.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,55 @@
+# Python Review Comments
+
+A minimal VS Code extension that reviews Python code and surfaces review
+comments inline (as diagnostics / squiggles) in the **Problems** panel.
+
+It is a lightweight heuristic reviewer — no external dependencies, no build
+step. It runs on plain JavaScript against the VS Code API.
+
+## What it flags
+
+| Rule | Severity |
+|------|----------|
+| Line longer than `pythonReview.maxLineLength` (default 100) | Info |
+| Trailing whitespace | Hint |
+| Bare `except:` | Warning |
+| Mutable default argument (`def f(x=[])`) | Warning |
+| `== None` / `!= None` instead of `is` / `is not` | Warning |
+| `== True` / `== False` | Info |
+| `type(x) ==` instead of `isinstance` | Info |
+| Wildcard import (`from m import *`) | Warning |
+| Leftover `print(...)` | Hint |
+| `TODO` / `FIXME` / `XXX` / `HACK` comments | Hint |
+| Tab indentation | Info |
+| Public `def` / `class` with no docstring | Hint |
+
+Lines inside triple-quoted strings/docstrings are skipped to avoid false
+positives.
+
+## Commands
+
+- **Python Review: Review Current File** — review the active file on demand.
+- **Python Review: Clear Comments** — remove all review comments.
+
+## Settings
+
+- `pythonReview.runOnSave` (default `true`) — review automatically on open/save.
+- `pythonReview.maxLineLength` (default `100`) — line-length threshold.
+
+## Running it
+
+1. Open this folder in VS Code.
+2. Press `F5` to launch an **Extension Development Host** window.
+3. Open a `.py` file (e.g. `sample.py`) — review comments appear inline and in
+   the Problems panel.
+
+## Packaging (optional)
+
+To produce a `.vsix` for installation:
+
+```bash
+npm install -g @vscode/vsce
+vsce package
+```
+
+Then in VS Code: *Extensions → ⋯ → Install from VSIX…*
