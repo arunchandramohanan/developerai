@@ -2,12 +2,10 @@
 
 AI-assisted development for VS Code: test generation, documentation, code review,
 UML/sequence/flow diagrams, feature-code generation, dependency & platform
-upgrades, and SAST (SonarQube / GitHub Code Scanning) remediation. This is a
-feature-for-feature port of the **DevAI IntelliJ plugin** (`com.bmo.devai.intellij`).
+upgrades, and SAST (SonarQube / GitHub Code Scanning) remediation. T
 
 ## Dual-mode execution
 
-Mirrors the IntelliJ plugin's SDK/Chat/Auto model:
 
 - **SDK mode** — shells out to the **GitHub Copilot CLI** (`copilot -p … --model …`). It prefers the standalone `copilot` binary and falls back to the `gh copilot` extension form.
 - **Chat mode** — uses the VS Code **Language Model API** (`vscode.lm`) to drive GitHub Copilot's chat models (the VS Code equivalent of IntelliJ's Copilot Chat integration).
@@ -72,4 +70,4 @@ npm run package    # produce the .vsix (requires @vscode/vsce)
 Press **F5** in VS Code to launch an Extension Development Host.
 
 ---
-**Maintained by:** BMO GenAI Developer Team
+

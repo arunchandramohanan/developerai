@@ -2,7 +2,7 @@
   "name": "bmo-genai-developer",
   "displayName": "BMO GenAI Developer",
   "description": "AI-powered development assistant: test generation, documentation, code review, diagrams, SAST remediation, dependency & platform upgrades. Dual-mode execution via GitHub Copilot CLI (SDK) or the VS Code Language Model API (Chat).",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "bmo",
   "license": "SEE LICENSE IN README.md",
   "engines": {
