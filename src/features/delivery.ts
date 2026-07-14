@@ -28,6 +28,8 @@ import {
 import { resolveAvailableMarkdownPath } from "../util/response";
 import { workspaceRoot, log } from "../core/context";
 import { notifyError, notifyInfo, notifyWarning, showInfoWithActions } from "../util/notify";
+import { handleIfChatMode } from "../chatmode/integrator";
+import { TaskType } from "../models/chat";
 
 const BATCH_APPLY_COMMAND = "devai.platformUpgrades.apply";
 
@@ -51,7 +53,7 @@ export function registerDelivery(context: vscode.ExtensionContext): void {
       runFeatureCodeGeneration(uri, "Generate Feature Code")
     ),
     vscode.commands.registerCommand("devai.generateFeatureScaffold", (uri?: vscode.Uri) =>
-      runFeatureCodeGeneration(uri, "Generate Feature Scaffold")
+      runFeatureCodeGeneration(uri, "Generate Feature Scaffold", TaskType.FEATURE_SCAFFOLD)
     ),
     vscode.commands.registerCommand("devai.updateFeatureCode", () =>
       runFeatureCodeUpdate(featureUpdateService)
@@ -72,7 +74,11 @@ export function registerDelivery(context: vscode.ExtensionContext): void {
 }
 
 // ── Feature code generation / scaffold ─────────────────────────────────
-async function runFeatureCodeGeneration(uri: vscode.Uri | undefined, title: string): Promise<void> {
+async function runFeatureCodeGeneration(
+  uri: vscode.Uri | undefined,
+  title: string,
+  chatTaskType?: TaskType
+): Promise<void> {
   const requirementsPath = await resolveRequirementsFile(uri, "Select Requirements Document");
   if (!requirementsPath) return;
 
@@ -81,6 +87,10 @@ async function runFeatureCodeGeneration(uri: vscode.Uri | undefined, title: stri
     notifyError("Please select a markdown (.md) requirements file.");
     return;
   }
+
+  // Only the scaffold flow intercepts into Chat Mode, mirroring
+  // GenerateFeatureScaffoldAction (GenerateFeatureCodeAction runs SDK-side).
+  if (chatTaskType != null && (await handleIfChatMode(chatTaskType, requirementsPath))) return;
 
   const requirementsContent = readTextFile(requirementsPath);
   if (requirementsContent == null || requirementsContent.trim() === "") {
@@ -213,6 +223,8 @@ async function runFeatureCodeUpdate(service: FeatureUpdateService): Promise<void
     }
   }
   if (!requirementsPath) return;
+
+  if (await handleIfChatMode(TaskType.FEATURE_UPDATE, requirementsPath)) return;
 
   await service.executeCliUpdate(requirementsPath, null);
 }

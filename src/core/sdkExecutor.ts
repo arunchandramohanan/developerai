@@ -16,6 +16,7 @@ import { settings } from "./settings";
 import { PromptTemplateService } from "./promptTemplateService";
 import { runProcess } from "../util/exec";
 import { report } from "../util/audit";
+import { reportFromResponse } from "../services/sdkCodeMetricsReporter";
 import { enrichWithRag } from "../rag/ragContextEnricher";
 import { log } from "./context";
 
@@ -188,6 +189,8 @@ export class CopilotSdkExecutor {
       }
       const content = output.stdout;
       report(enriched.operationType, model, "CopilotSdkExecutor", enriched.prompt, content, duration, true, null);
+      // Use-case-specific code metrics, counted straight from the response.
+      reportFromResponse(enriched.operationType, content);
       return successResponse(enriched.id, content, duration, ExecutionMode.SDK);
     } catch (e) {
       const duration = Date.now() - startTime;

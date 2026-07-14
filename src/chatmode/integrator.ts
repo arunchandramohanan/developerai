@@ -1,4 +1,4 @@
-import { ExecutionMode, ModePreference } from "../models";
+import { ExecutionMode, ModePreference, OperationType } from "../models";
 import { settings } from "../core/settings";
 import { ModeManager } from "../core/modeManager";
 import { TaskType, taskTypeTemplateId } from "../models/chat";
@@ -13,9 +13,9 @@ import { log } from "../core/context";
  * Port of com.bmo.devai.intellij.chatmode.ChatModeIntegrator.
  *
  * Integration helper for routing DevAI actions through Copilot Chat when Chat
- * Mode is active. Other clusters COULD call {@link handleIfChatMode} at the top
- * of a command to short-circuit into the chat pipeline — but the helpers are
- * self-contained (nothing else is required to import them).
+ * Mode is active. Feature clusters call {@link handleIfChatMode} (and its
+ * variants) at the top of their commands to short-circuit into the chat
+ * pipeline, mirroring the ChatModeIntegrator calls in the IntelliJ actions.
  */
 
 /**
@@ -94,7 +94,39 @@ export async function handleDocUpdate(): Promise<boolean> {
     return true;
   }
   const prompt = ChatModePromptComposer.getInstance().compose(taskTypeTemplateId(TaskType.DOC_UPDATE), context);
-  const result = await ChatModeTrigger.getInstance().triggerWithPrompt(prompt);
+  const result = await ChatModeTrigger.getInstance().triggerWithPrompt(prompt, OperationType.UPDATE_DOCUMENTATION);
+  if (!result.success && shouldShowFailureWarning(result.error)) {
+    notifyWarning(chatTriggerFailedMessage(result.error));
+  }
+  return true;
+}
+
+/**
+ * Selection-scoped review variant; returns true if Chat Mode handled it.
+ * Port of ChatModeIntegrator.handleSelectionReview.
+ */
+export async function handleSelectionReview(
+  filePath: string,
+  selectedText: string,
+  startLine: number,
+  endLine: number
+): Promise<boolean> {
+  if (!isChatModeActive()) return false;
+  const result = await ChatModeTrigger.getInstance().triggerSelectionReview(filePath, selectedText, startLine, endLine);
+  if (!result.success && shouldShowFailureWarning(result.error)) {
+    notifyWarning(chatTriggerFailedMessage(result.error));
+  }
+  return true;
+}
+
+/**
+ * API-drift variant: gathers the spec file's git diff and current code changes
+ * and sends an api-drift prompt to Copilot Chat. Returns true if Chat Mode
+ * handled it. Port of ChatModeIntegrator.handleApiDrift.
+ */
+export async function handleApiDrift(specFilePath: string): Promise<boolean> {
+  if (!isChatModeActive()) return false;
+  const result = await ChatModeTrigger.getInstance().triggerApiDrift(specFilePath);
   if (!result.success && shouldShowFailureWarning(result.error)) {
     notifyWarning(chatTriggerFailedMessage(result.error));
   }

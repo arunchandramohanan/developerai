@@ -21,6 +21,22 @@ import {
   exportFormatDisplayName,
   newDiagramContext,
 } from "../models/diagram";
+import { handleIfChatMode } from "../chatmode/integrator";
+import { TaskType } from "../models/chat";
+
+/** Port of GenerateUMLDiagramAction's DiagramType → chat TaskType mapping. */
+function diagramTaskType(diagramType: DiagramType): TaskType {
+  switch (diagramType) {
+    case DiagramType.CLASS_DIAGRAM:
+      return TaskType.UML_CLASS_DIAGRAM;
+    case DiagramType.SEQUENCE_DIAGRAM:
+      return TaskType.UML_SEQUENCE_DIAGRAM;
+    case DiagramType.FLOW_DIAGRAM:
+      return TaskType.UML_FLOW_DIAGRAM;
+    default:
+      return TaskType.UML_DIAGRAM;
+  }
+}
 
 /**
  * Port of the diagrams action cluster:
@@ -28,9 +44,9 @@ import {
  *   GenerateFlowDiagramAction,RenderMermaidDiagramAction,UpdateDiagramAction}.java
  * plus services/UMLDiagramService(Impl) and util/MermaidRendererUtil.
  *
- * SDK vs Chat mode routing and RAG enrichment are handled automatically by
- * core/copilotService — unlike the Java actions, we don't need to special-case
- * ChatModeIntegrator here.
+ * When Chat Mode is active, generate/update commands intercept into the
+ * Copilot Chat pipeline (mirroring the ChatModeIntegrator calls in the Java
+ * actions); rendering is always local.
  */
 
 /** Limits used when collecting source for the "update diagram" flow (matches UpdateDiagramAction.java). */
@@ -65,6 +81,8 @@ async function handleGenerate(diagramType: DiagramType): Promise<void> {
 
   const resolved = await resolvePathsForScope(scope);
   if (!resolved) return;
+
+  if (await handleIfChatMode(diagramTaskType(diagramType), resolved.paths[0] ?? null)) return;
 
   const diagramContext = newDiagramContext(diagramType, ExportFormat.MERMAID_MD, resolved.paths, scope, resolved.scopeName);
 
@@ -223,6 +241,8 @@ async function handleRender(uri?: vscode.Uri): Promise<void> {
 async function handleUpdate(uri?: vscode.Uri): Promise<void> {
   const mmdPath = await resolveMmdFile(uri, "Select Diagram to Update", "Choose a .mmd file with scope metadata to update");
   if (!mmdPath) return;
+
+  if (await handleIfChatMode(TaskType.UPDATE_DIAGRAM, mmdPath)) return;
 
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Updating Diagram", cancellable: false },

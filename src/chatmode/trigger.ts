@@ -16,6 +16,7 @@ import {
 import { OperationType } from "../models";
 import { ChatModeContextGatherer, DiffScope } from "./contextGatherer";
 import { ChatModePromptComposer } from "./promptComposer";
+import { captureGitStat, scheduleCodeMetricsCapture } from "../services/aiCodeCapture";
 import { enrich as ragEnrich } from "../rag/ragContextEnricher";
 import { log, logError } from "../core/context";
 import { notifyWarning } from "../util/notify";
@@ -73,8 +74,17 @@ export class ChatModeTrigger {
     return triggerFailure(copilotNotInstalledMessage(), DeliveryMethod.CHAT_PANEL);
   }
 
-  /** Opens Copilot Chat pre-filled with the composed prompt; clipboard fallback on failure. */
-  async triggerWithPrompt(prompt: ComposedPrompt): Promise<ChatTriggerResult> {
+  /**
+   * Opens Copilot Chat pre-filled with the composed prompt; clipboard fallback
+   * on failure. When an {@link OperationType} is supplied, a pre-submit git
+   * snapshot is taken and the AI-code-capture poller is started on success so
+   * the AI-generated working-tree delta gets reported as code metrics (Chat
+   * Mode cannot see the model's output directly).
+   */
+  async triggerWithPrompt(prompt: ComposedPrompt, operationType?: OperationType): Promise<ChatTriggerResult> {
+    // Pre-submit git snapshot for AI-code-capture (port of capturePreGitSnapshot).
+    const preGitSnapshot = operationType != null ? await captureGitStat() : null;
+
     // Always copy to clipboard first so a manual paste is possible even if the
     // programmatic open partially fails.
     await copyToClipboard(prompt.text);
@@ -83,6 +93,9 @@ export class ChatModeTrigger {
     try {
       await vscode.commands.executeCommand("workbench.action.chat.open", { query: prompt.text });
       log("Delivered prompt to Copilot Chat via workbench.action.chat.open");
+      if (operationType != null && preGitSnapshot != null) {
+        scheduleCodeMetricsCapture(preGitSnapshot, operationType);
+      }
       return triggerSuccess(prompt.text, DeliveryMethod.CHAT_PANEL);
     } catch (e) {
       log("chat.open with query failed: " + (e instanceof Error ? e.message : String(e)));
@@ -123,7 +136,7 @@ export class ChatModeTrigger {
         context = gatherer.buildContextForActiveFile();
       }
       context = await enrichWithRag(taskTypeToOperationType(taskType), context);
-      return await this.composeAndTrigger(taskTypeTemplateId(taskType), context);
+      return await this.composeAndTrigger(taskTypeTemplateId(taskType), context, taskTypeToOperationType(taskType));
     } catch (e) {
       logError("Failed to trigger Copilot Chat for task: " + taskType, e);
       return triggerFailure("Error: " + (e instanceof Error ? e.message : String(e)), DeliveryMethod.CHAT_PANEL);
@@ -136,7 +149,7 @@ export class ChatModeTrigger {
       const gatherer = ChatModeContextGatherer.getInstance();
       let context = gatherer.buildContextForFolder(folderPath);
       context = await enrichWithRag(taskTypeToOperationType(taskType), context);
-      return await this.composeAndTrigger(taskTypeTemplateId(taskType), context);
+      return await this.composeAndTrigger(taskTypeTemplateId(taskType), context, taskTypeToOperationType(taskType));
     } catch (e) {
       logError("Failed to trigger Copilot Chat for folder task: " + taskType, e);
       return triggerFailure("Error: " + (e instanceof Error ? e.message : String(e)), DeliveryMethod.CHAT_PANEL);
@@ -158,16 +171,72 @@ export class ChatModeTrigger {
       const gatherer = ChatModeContextGatherer.getInstance();
       const context = await gatherer.buildContextForReview(scope, baseBranch, currentFilePath);
       const templateId = hasDiffContext(context) ? "diff-review" : "code-review";
-      return await this.composeAndTrigger(templateId, context);
+      return await this.composeAndTrigger(templateId, context, OperationType.CODE_REVIEW);
     } catch (e) {
       logError("Failed to trigger diff review for scope: " + scope, e);
       return triggerFailure("Error: " + (e instanceof Error ? e.message : String(e)), DeliveryMethod.CHAT_PANEL);
     }
   }
 
-  private async composeAndTrigger(templateId: string, context: PromptContext): Promise<ChatTriggerResult> {
+  /**
+   * Routes a selection-scoped code review through the chat pipeline.
+   * Port of ChatModeTriggerServiceImpl.triggerSelectionReview.
+   */
+  async triggerSelectionReview(
+    filePath: string,
+    selectedText: string,
+    startLine: number,
+    endLine: number
+  ): Promise<ChatTriggerResult> {
+    try {
+      const gatherer = ChatModeContextGatherer.getInstance();
+      const context = gatherer.buildContextForFile(filePath);
+      const fileContext = context.activeFile;
+      if (fileContext == null) {
+        return triggerFailure("Unable to read file: " + filePath, DeliveryMethod.CHAT_PANEL);
+      }
+      const selectionContext: PromptContext = {
+        ...context,
+        selectedText,
+        selectionStartLine: startLine,
+        selectionEndLine: endLine,
+      };
+      return await this.composeAndTrigger("selection-review", selectionContext, OperationType.CODE_REVIEW);
+    } catch (e) {
+      logError("Failed to trigger selection review", e);
+      return triggerFailure("Error: " + (e instanceof Error ? e.message : String(e)), DeliveryMethod.CHAT_PANEL);
+    }
+  }
+
+  /**
+   * Routes an API-drift analysis through the chat pipeline: gathers the git
+   * diff of the selected spec file and current code changes, then sends an
+   * api-drift prompt. Port of ChatModeTriggerServiceImpl.triggerApiDrift.
+   */
+  async triggerApiDrift(specFilePath: string): Promise<ChatTriggerResult> {
+    try {
+      const gatherer = ChatModeContextGatherer.getInstance();
+      const reviewContext = await gatherer.buildContextForReview(DiffScope.CURRENT_FILE, null, specFilePath);
+      // Repackage so changedFiles holds the clean spec path for the template.
+      const context: PromptContext = {
+        ...reviewContext,
+        diffContent: reviewContext.diffContent ?? "",
+        changedFiles: specFilePath,
+      };
+      return await this.composeAndTrigger(taskTypeTemplateId(TaskType.API_DRIFT), context, OperationType.API_DRIFT);
+    } catch (e) {
+      logError("Failed to trigger API drift detection", e);
+      return triggerFailure("Error: " + (e instanceof Error ? e.message : String(e)), DeliveryMethod.CHAT_PANEL);
+    }
+  }
+
+  private async composeAndTrigger(
+    templateId: string,
+    context: PromptContext,
+    operationType?: OperationType
+  ): Promise<ChatTriggerResult> {
     const prompt = ChatModePromptComposer.getInstance().compose(templateId, context);
-    return this.triggerWithPrompt(prompt);
+    return this.triggerWithPrompt(prompt, operationType);
   }
 }
 

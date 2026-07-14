@@ -32,6 +32,14 @@ import { newRequest, OperationType } from "../models";
 import { executeForContent } from "../core/copilotService";
 import { settings } from "../core/settings";
 import { OPEN_ISSUE_COMMAND, ReviewResultsProvider } from "../views/reviewResultsView";
+import {
+  handleApiDrift,
+  handleDiffReview,
+  handleIfChatMode,
+  handleSelectionReview,
+  isChatModeActive,
+} from "../chatmode/integrator";
+import { TaskType } from "../models/chat";
 
 const DIAGNOSTIC_SOURCE = "BMO GenAI Review";
 const FIX_PREVIEW_SCHEME = "devai-review-fix";
@@ -68,6 +76,26 @@ export function registerReview(context: vscode.ExtensionContext): void {
         return;
       }
 
+      // Chat Mode intercept, mirroring ReviewCodeAction: a selection routes
+      // through selection-review, otherwise the whole file goes to code-review.
+      if (isChatModeActive()) {
+        const filePath = editor.document.uri.fsPath;
+        if (!editor.selection.isEmpty) {
+          const selectedText = editor.document.getText(editor.selection);
+          if (
+            await handleSelectionReview(
+              filePath,
+              selectedText,
+              editor.selection.start.line + 1,
+              editor.selection.end.line + 1
+            )
+          ) {
+            return;
+          }
+        }
+        if (await handleIfChatMode(TaskType.CODE_REVIEW, filePath)) return;
+      }
+
       if (!editor.selection.isEmpty) {
         const selection = await getSelection(editor);
         if (!selection) {
@@ -82,41 +110,61 @@ export function registerReview(context: vscode.ExtensionContext): void {
     })
   );
 
+  // Shared scoped-review runner used by devai.reviewChanges (after a
+  // QuickPick) and by the per-scope commands surfaced in the main view
+  // (mirroring the four review entries of the IntelliJ tool-window tree).
+  async function runScopedReview(scope: DiffScope): Promise<void> {
+    if (service.isReviewing()) {
+      notifyWarning("A code review is already in progress.");
+      return;
+    }
+
+    let baseBranch: string | null = null;
+    if (scope === DiffScope.FEATURE_BRANCH) {
+      const detected = await service.getDiffAnalyzer().detectDefaultBranch().catch(() => "main");
+      const input = await vscode.window.showInputBox({
+        title: "Base Branch",
+        prompt: "Enter the base branch to compare against:",
+        value: detected,
+      });
+      if (input === undefined) return; // cancelled
+      baseBranch = input.trim().length === 0 ? null : input.trim();
+    }
+
+    const currentFilePath =
+      scope === DiffScope.CURRENT_FILE ? vscode.window.activeTextEditor?.document.uri.fsPath ?? null : null;
+    if (scope === DiffScope.CURRENT_FILE && !currentFilePath) {
+      notifyWarning("No file is open in the editor. Open a source file first.");
+      return;
+    }
+
+    // Chat Mode intercept, mirroring ReviewChangesAction.
+    if (await handleDiffReview(scope, baseBranch, currentFilePath)) return;
+
+    const scopeLabel = diffScopeDisplayName(scope).toLowerCase();
+    if (scope === DiffScope.CURRENT_FILE && currentFilePath) {
+      // reviewFile falls back to full-file content review, matching the IntelliJ flow.
+      await runReview(() => service.reviewFile(currentFilePath), `Reviewing ${diffScopeDisplayName(scope)}`, service, provider, diagnostics, scopeLabel);
+    } else {
+      await runReview(() => service.reviewDiff(scope, null, baseBranch), `Reviewing ${diffScopeDisplayName(scope)}`, service, provider, diagnostics, scopeLabel);
+    }
+  }
+
   // ── devai.reviewChanges ───────────────────────────────────────────────
   context.subscriptions.push(
     vscode.commands.registerCommand("devai.reviewChanges", async () => {
-      if (service.isReviewing()) {
-        notifyWarning("A code review is already in progress.");
-        return;
-      }
       const scope = await pickScope();
       if (!scope) return;
-
-      let baseBranch: string | null = null;
-      if (scope === DiffScope.FEATURE_BRANCH) {
-        const detected = await service.getDiffAnalyzer().detectDefaultBranch().catch(() => "main");
-        const input = await vscode.window.showInputBox({
-          title: "Base Branch",
-          prompt: "Enter the base branch to compare against:",
-          value: detected,
-        });
-        if (input === undefined) return; // cancelled
-        baseBranch = input.trim().length === 0 ? null : input.trim();
-      }
-
-      const scopeLabel = diffScopeDisplayName(scope).toLowerCase();
-      if (scope === DiffScope.CURRENT_FILE) {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-          notifyWarning("No file is open in the editor. Open a source file first.");
-          return;
-        }
-        // reviewFile falls back to full-file content review, matching the IntelliJ flow.
-        await runReview(() => service.reviewFile(editor.document.uri.fsPath), `Reviewing ${diffScopeDisplayName(scope)}`, service, provider, diagnostics, scopeLabel);
-      } else {
-        await runReview(() => service.reviewDiff(scope, null, baseBranch), `Reviewing ${diffScopeDisplayName(scope)}`, service, provider, diagnostics, scopeLabel);
-      }
+      await runScopedReview(scope);
     })
+  );
+
+  // ── Per-scope review commands (main-view tree entries) ────────────────
+  context.subscriptions.push(
+    vscode.commands.registerCommand("devai.reviewFeatureBranch", () => runScopedReview(DiffScope.FEATURE_BRANCH)),
+    vscode.commands.registerCommand("devai.reviewUncommitted", () => runScopedReview(DiffScope.UNCOMMITTED)),
+    vscode.commands.registerCommand("devai.reviewStaged", () => runScopedReview(DiffScope.STAGED)),
+    vscode.commands.registerCommand("devai.reviewCurrentFile", () => runScopedReview(DiffScope.CURRENT_FILE))
   );
 
   // ── devai.detectApiDrift ──────────────────────────────────────────────
@@ -182,6 +230,9 @@ export function registerReview(context: vscode.ExtensionContext): void {
       notifyWarning("The selected OpenAPI/Swagger file must be inside the current project so its git diff can be analyzed.");
       return;
     }
+
+    // Chat Mode intercept, mirroring DetectApiDriftAction.
+    if (await handleApiDrift(relSpec)) return;
 
     await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: "Detecting API drift", cancellable: false },

@@ -17,6 +17,8 @@ import { generateShakedownSuite } from "../services/shakedownTestService";
 import { showTestPreview } from "../ui/testPreviewPanel";
 import { showBatchTestPreview } from "../ui/testBatchPreviewPanel";
 import { showShakedownPreview } from "../ui/shakedownPreviewPanel";
+import { handleIfChatMode, handleIfChatModeFolder } from "../chatmode/integrator";
+import { TaskType } from "../models/chat";
 
 /**
  * Testing feature cluster — port of:
@@ -26,10 +28,11 @@ import { showShakedownPreview } from "../ui/shakedownPreviewPanel";
  *  - actions/GenerateShakedownTestsAction.java (spec-file resolution +
  *    validation) and services/ShakedownTestService[Impl].java (generation).
  *
- * Chat Mode intercept, teaser quota gating, and Save & Verify / Auto-Fix (via
- * TestRunnerService) from the Java actions/dialogs have no equivalent core
- * service in this extension and are intentionally omitted — see the ui/*
- * panel files for notes on the latter.
+ * Commands intercept into the Copilot Chat pipeline when Chat Mode is active
+ * (mirroring the ChatModeIntegrator calls in the Java actions). Teaser quota
+ * gating and Save & Verify / Auto-Fix (via TestRunnerService) have no
+ * equivalent core service in this extension and are intentionally omitted —
+ * see the ui/* panel files for notes on the latter.
  */
 export function registerTesting(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
@@ -65,6 +68,8 @@ async function runGenerateTests(): Promise<void> {
     notifyWarning("Please open a file to generate tests.");
     return;
   }
+
+  if (await handleIfChatMode(TaskType.TEST_GENERATION, editor.document.uri.fsPath)) return;
 
   const selection = await getActiveSelection();
   if (!selection) {
@@ -134,6 +139,8 @@ async function runGenerateTestsForFolder(uri?: vscode.Uri): Promise<void> {
 
   const folderPath = folderUri.fsPath;
   const folderName = path.basename(folderPath);
+
+  if (await handleIfChatModeFolder(TaskType.FOLDER_TEST_GENERATION, folderPath)) return;
 
   await vscode.window.withProgress(
     {
@@ -278,6 +285,8 @@ async function runGenerateShakedownTests(uri?: vscode.Uri): Promise<void> {
   }
 
   const specFilePath = target.fsPath;
+
+  if (await handleIfChatMode(TaskType.SHAKEDOWN_TEST_GENERATION, specFilePath)) return;
 
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Generate Shakedown Test Suite", cancellable: false },

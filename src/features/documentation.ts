@@ -32,6 +32,8 @@ import {
   rowsToCsv,
   resolveAvailableCsvPath,
 } from "../services/userStoriesService";
+import { handleIfChatMode, handleDocUpdate } from "../chatmode/integrator";
+import { TaskType } from "../models/chat";
 
 /**
  * Registers the documentation command cluster, ported from:
@@ -83,6 +85,9 @@ async function handleGenerateDocumentation(): Promise<void> {
     notifyWarning("Open a file and position the cursor on a class, method, or field.");
     return;
   }
+
+  if (await handleIfChatMode(TaskType.DOCS_GENERATION, editor.document.uri.fsPath)) return;
+
   const selection = await getActiveSelection();
   if (!selection || !selection.text || selection.text.trim().length === 0) {
     notifyWarning("Please position the cursor on a class, method, or field, or select code.");
@@ -170,6 +175,9 @@ async function handleGenerateReadme(): Promise<void> {
     notifyWarning("Open a project folder to generate a README.");
     return;
   }
+
+  if (await handleIfChatMode(TaskType.README_GENERATION, null)) return;
+
   await withProgressNotification("Generating README", async () => {
     const projectName = path.basename(root);
     const content = await generateReadme(root, projectName);
@@ -201,6 +209,8 @@ async function handleGenerateFileDocumentation(uri?: vscode.Uri): Promise<void> 
     notifyWarning("Select a file (not a folder) to generate file documentation for.");
     return;
   }
+
+  if (await handleIfChatMode(TaskType.FILE_DOCUMENTATION, filePath)) return;
 
   await withProgressNotification("Generating File Documentation", async () => {
     const content = readTextFile(filePath);
@@ -234,6 +244,8 @@ async function handleGenerateFolderDocumentation(uri?: vscode.Uri): Promise<void
   }
   if (!folderPath) return;
   const targetFolder = folderPath;
+
+  if (await handleIfChatMode(TaskType.FOLDER_DOCUMENTATION, targetFolder)) return;
 
   await withProgressNotification("Generating Folder Documentation", async () => {
     const files = collectFolderSourceFiles(targetFolder);
@@ -277,6 +289,9 @@ async function handleUpdateDocsOnChanges(): Promise<void> {
     notifyWarning("Open a project folder to update documentation.");
     return;
   }
+
+  if (await handleDocUpdate()) return;
+
   await withProgressNotification("Updating Documentation", async () => {
     const outcome = await updateDocsOnChanges(root);
     if (!outcome) {
@@ -362,6 +377,8 @@ async function handleGenerateUserStories(): Promise<void> {
     notifyError("Unsupported file type. Supported requirements formats are .md, .txt, .doc, .docx, .pdf");
     return;
   }
+
+  if (await handleIfChatMode(TaskType.STORY_GENERATION, filePath)) return;
 
   await withProgressNotification("Generating User Stories", async () => {
     const requirementsContent = readRequirementsDocument(filePath);
